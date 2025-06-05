@@ -435,10 +435,18 @@ async def get_products(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/products", response_model=Product)
 async def create_product(product_data: ProductCreate, current_user: User = Depends(get_current_user)):
-    if current_user.role != 'admin' and not current_user.branch_id:
-        raise HTTPException(status_code=400, detail="User must be assigned to a branch")
+    # For non-admin users, use their assigned branch
+    if current_user.role != 'admin':
+        if not current_user.branch_id:
+            raise HTTPException(status_code=400, detail="User must be assigned to a branch")
+        branch_id = current_user.branch_id
+    else:
+        # For admin users, use the first available branch as default
+        branches = await db.branches.find().to_list(1)
+        if not branches:
+            raise HTTPException(status_code=400, detail="No branches available")
+        branch_id = branches[0]["id"]
     
-    branch_id = current_user.branch_id if current_user.role != 'admin' else current_user.branch_id
     product = Product(branch_id=branch_id, **product_data.dict())
     await db.products.insert_one(product.dict())
     return product
