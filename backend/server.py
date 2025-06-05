@@ -485,10 +485,17 @@ async def get_sales(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):
-    if current_user.role != 'admin' and not current_user.branch_id:
-        raise HTTPException(status_code=400, detail="User must be assigned to a branch")
-    
-    branch_id = current_user.branch_id if current_user.role != 'admin' else current_user.branch_id
+    # For non-admin users, use their assigned branch
+    if current_user.role != 'admin':
+        if not current_user.branch_id:
+            raise HTTPException(status_code=400, detail="User must be assigned to a branch")
+        branch_id = current_user.branch_id
+    else:
+        # For admin users, use the first available branch as default
+        branches = await db.branches.find().to_list(1)
+        if not branches:
+            raise HTTPException(status_code=400, detail="No branches available")
+        branch_id = branches[0]["id"]
     
     # Calculate total amount and update stock
     total_amount = 0
