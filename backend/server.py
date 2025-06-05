@@ -385,10 +385,18 @@ async def get_vendors(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/vendors", response_model=Vendor)
 async def create_vendor(vendor_data: VendorCreate, current_user: User = Depends(get_current_user)):
-    if current_user.role != 'admin' and not current_user.branch_id:
-        raise HTTPException(status_code=400, detail="User must be assigned to a branch")
+    # For non-admin users, use their assigned branch
+    if current_user.role != 'admin':
+        if not current_user.branch_id:
+            raise HTTPException(status_code=400, detail="User must be assigned to a branch")
+        branch_id = current_user.branch_id
+    else:
+        # For admin users, use the first available branch as default
+        branches = await db.branches.find().to_list(1)
+        if not branches:
+            raise HTTPException(status_code=400, detail="No branches available")
+        branch_id = branches[0]["id"]
     
-    branch_id = current_user.branch_id if current_user.role != 'admin' else current_user.branch_id
     vendor = Vendor(branch_id=branch_id, **vendor_data.dict())
     await db.vendors.insert_one(vendor.dict())
     return vendor
