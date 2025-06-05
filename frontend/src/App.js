@@ -927,6 +927,342 @@ const Stock = () => {
   );
 };
 
+// Branches Component (Admin only)
+const Branches = () => {
+  const fields = [
+    { key: 'name', label: 'Branch Name' },
+    { key: 'code', label: 'Branch Code' },
+    { key: 'address', label: 'Address' }
+  ];
+
+  return (
+    <CrudComponent
+      title="Branches"
+      apiEndpoint="branches"
+      fields={fields}
+    />
+  );
+};
+
+// Users Component (Admin only)
+const Users = () => {
+  const [users, setUsers] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [usersRes, branchesRes] = await Promise.all([
+        axios.get(`${API}/users`),
+        axios.get(`${API}/branches`)
+      ]);
+      setUsers(usersRes.data);
+      setBranches(branchesRes.data);
+    } catch (error) {
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onSubmit = async (data) => {
+    try {
+      await axios.post(`${API}/users`, data);
+      toast.success('User created successfully!');
+      reset();
+      setShowForm(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create user');
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Users</h2>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+        >
+          {showForm ? 'Cancel' : 'Add User'}
+        </button>
+      </div>
+
+      {/* Add Form */}
+      {showForm && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold mb-4">Add New User</h3>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input
+                {...register('username', { required: 'Username is required' })}
+                type="text"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                {...register('email', { required: 'Email is required' })}
+                type="email"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                {...register('password', { required: 'Password is required' })}
+                type="password"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <select
+                {...register('role', { required: 'Role is required' })}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select Role</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+              {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+              <select
+                {...register('branch_id')}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select Branch (Optional for Admin)</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name} ({branch.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200"
+              >
+                Create User
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Users List */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {users.map((user) => {
+                const branch = branches.find(b => b.id === user.branch_id);
+                return (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {user.username}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {branch ? `${branch.name} (${branch.code})` : 'No Branch'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        
+        {users.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No users found. Create your first user!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Company Component (Admin only)
+const Company = () => {
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+
+  useEffect(() => {
+    fetchCompany();
+  }, []);
+
+  const fetchCompany = async () => {
+    try {
+      const response = await axios.get(`${API}/company`);
+      setCompany(response.data);
+      if (response.data) {
+        setValue('name', response.data.name);
+        setValue('address', response.data.address);
+        setValue('phone', response.data.phone);
+      }
+    } catch (error) {
+      toast.error('Failed to load company data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onSubmit = async (data) => {
+    try {
+      const response = await axios.put(`${API}/company`, data);
+      setCompany(response.data);
+      setEditing(false);
+      toast.success('Company updated successfully!');
+    } catch (error) {
+      toast.error('Failed to update company');
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Company Settings</h2>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+        >
+          {editing ? 'Cancel' : 'Edit Company'}
+        </button>
+      </div>
+
+      {/* Company Details */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        {editing ? (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+              <input
+                {...register('name', { required: 'Company name is required' })}
+                type="text"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+              <textarea
+                {...register('address', { required: 'Address is required' })}
+                rows="3"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                {...register('phone', { required: 'Phone is required' })}
+                type="text"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>}
+            </div>
+            
+            <button
+              type="submit"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200"
+            >
+              Update Company
+            </button>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">{company?.name || 'ABC Pvt Ltd'}</h3>
+            </div>
+            <div>
+              <p className="text-gray-600"><strong>Address:</strong></p>
+              <p className="text-gray-900">{company?.address || 'Singur, Hooghly'}</p>
+            </div>
+            <div>
+              <p className="text-gray-600"><strong>Phone:</strong></p>
+              <p className="text-gray-900">{company?.phone || '+917545212547'}</p>
+            </div>
+            {company?.updated_at && (
+              <div>
+                <p className="text-gray-600"><strong>Last Updated:</strong></p>
+                <p className="text-gray-900">{new Date(company.updated_at).toLocaleDateString()}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
