@@ -1296,6 +1296,9 @@ function App() {
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
             <Route path="/stock" element={<ProtectedRoute><Stock /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute><Branches /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+            <Route path="/company" element={<ProtectedRoute><Company /></ProtectedRoute>} />
           </Routes>
         </div>
       </Router>
